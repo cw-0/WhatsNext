@@ -2,14 +2,16 @@ import app.Game.Game;
 
 void main() {
     printHeader();
-    int[] seq = Game.loadSeq();
 
     while (true){
         int[] userArr = Game.getUserArr();
-        if (Game.compareArr(seq, userArr) == 5){
+        int correct = Game.compareArr(userArr);
+
+        if (Game.QUITTING == true) { Game.quit(correct); }
+
+        if (correct == 5){
             Game.win();
-            break;
-        } else { Game.wrong(); }
+        } else { Game.wrongGuess(correct); }
     }
 }
 
