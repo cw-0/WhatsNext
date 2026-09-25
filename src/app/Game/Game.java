@@ -1,12 +1,25 @@
 package app.Game;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Game {
     public static boolean DEBUG = false;
+    public static boolean SHOW_ANSWER = true;
+    public static String username = getCurrentTime();
+    public static String highscoresFile = "highscores.csv";
 
     public static int turnCount = 0;
     public static boolean QUITTING = false;
     public static int[] sequence = loadSeq();
+    public static Map<String, Integer> scoresMap = new HashMap<>();
 
     public static int[] loadSeq(){
         int[] seq = {0, 0, 0, 0, 0};
@@ -25,7 +38,7 @@ public class Game {
             usedIdx.add(idx);
         }
 
-        if (DEBUG) { System.out.println("SEQ: " + Arrays.toString(seq)); }
+        if (DEBUG || SHOW_ANSWER) { System.out.println("SEQ: " + Arrays.toString(seq)); }
         return seq;
     } // End load seq
 
@@ -121,11 +134,100 @@ public class Game {
         System.out.println("-----------");
         System.out.println();
 
-        // TODO: Add Highscores
+        // TODO: Add Highscore
+        fetchHighscores();
+        if (!Game.QUITTING){
+            updateHighscores();
+            writeHighscores();
+        }
+        printHighscores();
 
         System.exit(0);
     }
 
+public static void fetchHighscores(){
 
+
+         if (!Files.exists(Path.of(Game.highscoresFile)) || !Files.isRegularFile(Path.of(Game.highscoresFile))){
+             if (DEBUG){ System.out.println("Highscores File not found"); }
+             return;
+         }
+
+         BufferedReader reader = null;
+         String line = "";
+
+          try {
+              reader = new BufferedReader(new FileReader(Game.highscoresFile));
+              boolean firstLine = true;
+              while ((line = reader.readLine()) != null){
+                  if (firstLine == true){
+                      firstLine = false;
+                      continue;
+                  }
+
+                  String[] row = line.split(",");
+                  Game.scoresMap.put(row[0], Integer.parseInt(row[1]));
+
+              }
+
+          } catch(Exception e){
+              e.printStackTrace();
+         } finally {
+              try{
+                  reader.close();
+              } catch (Exception e){
+                  e.printStackTrace();
+              }
+          }
+}
+
+public static void updateHighscores(){
+    Game.scoresMap.put(Game.username, Game.turnCount);
+
+    Game.scoresMap = Game.scoresMap.entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+            .limit(5)
+            .collect(Collectors.toMap(
+                    Map.Entry::getKey,
+                    Map.Entry::getValue,
+                    (oldValue, newValue) -> oldValue,
+                    LinkedHashMap::new
+            ));
+    if (DEBUG) {
+        System.out.println("Scores Updated");
+        printHighscores();
+    }
+}
+
+public static void writeHighscores(){
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(Game.highscoresFile))){
+            writer.write("Name,Score");
+            writer.newLine();
+            for (Map.Entry<String, Integer> entry : Game.scoresMap.entrySet()) {
+                String key = entry.getKey();
+                String value = String.valueOf(entry.getValue());
+                String line = key + "," + value;
+                writer.write(line);
+                writer.newLine();
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+}
+
+public static void printHighscores(){
+    for (Map.Entry<String, Integer> entry : Game.scoresMap.entrySet()) {
+        System.out.println(entry.getValue() + "-" + entry.getKey());
+    }
+}
+
+public static String getCurrentTime(){
+        LocalTime now = LocalTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH::mm::ss");
+        String formattedTime = now.format(formatter);
+        return formattedTime;
+}
 
 } // end Class Game
